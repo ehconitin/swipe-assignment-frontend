@@ -18,7 +18,7 @@ import {
   useInvoiceListData,
   useProductsListData,
 } from "../redux/hooks";
-import { updateProduct } from "../redux/productsSlice";
+import { addProduct, updateProduct } from "../redux/productsSlice";
 import { convertCurrency, convertPrice } from "../utils/currencyCoverter";
 import { newCurrencySymbol } from "../utils/newCurrencySymbol";
 import { setCurrentCurrency } from "../redux/currencyExchangeSlice";
@@ -196,12 +196,39 @@ const InvoiceForm = () => {
   };
 
   const handleAddInvoice = () => {
+    const newProductsToAdd = [];
+
+    // Check and update or add products in state
+    formData.items.forEach((item) => {
+      if (item.id !== 0) {
+        // Assuming 0 means it's a new item
+        const { id, name, description, rate } = item;
+        const existingProduct = productsList.find(
+          (product) => product.id === id
+        );
+        if (existingProduct) {
+          // Product exists, update it
+          dispatch(updateProduct({ id, name, description, rate }));
+        } else {
+          // Product does not exist, add it to newProductsToAdd
+          newProductsToAdd.push({ id, name, description, rate });
+        }
+      }
+    });
+
+    // Dispatch action to add new products
+    if (newProductsToAdd.length > 0) {
+      newProductsToAdd.forEach((product) => {
+        dispatch(addProduct(product)); // Replace with your actual add product action
+      });
+    }
     formData.items.forEach((item) => {
       if (item.id !== 0) {
         const { id, name, description, rate } = item;
         dispatch(updateProduct({ id, name, description, rate }));
       }
     });
+    formData.items.forEach((item) => {});
     if (isEdit) {
       console.log("updateing data", {
         id: params.id,

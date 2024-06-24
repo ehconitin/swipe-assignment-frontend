@@ -20,7 +20,14 @@ const productsSlice = createSlice({
   ],
   reducers: {
     addProduct: (state, action) => {
-      state.push({ ...action.payload, id: generateRandomId() });
+      const { payload } = action;
+      if (!payload.id) {
+        // If payload does not have an id, generate a random id and add to state
+        state.push({ ...payload, id: generateRandomId() });
+      } else {
+        // If payload already has an id, just push it to state
+        state.push(payload);
+      }
     },
     deleteProduct: (state, action) => {
       return state.filter((product) => product.id !== action.payload);

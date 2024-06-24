@@ -157,12 +157,12 @@ const InvoiceModal = (props) => {
                     {current === "USD" ? (
                       <div>
                         {newCurrencySymbol(current)}
-                        {props.taxAmmount || 0}
+                        {props.taxAmount || 0}
                       </div>
                     ) : (
                       <div>
                         {newCurrencySymbol(current)}
-                        {convertPrice(props.taxAmmount || 0, current, rates)}
+                        {convertPrice(props.taxAmount || 0, current, rates)}
                       </div>
                     )}
                   </td>
@@ -177,13 +177,13 @@ const InvoiceModal = (props) => {
                       {current === "USD" ? (
                         <div>
                           {newCurrencySymbol(current)}
-                          {props.discountAmmount || 0}
+                          {props.discountAmount || 0}
                         </div>
                       ) : (
                         <div>
                           {newCurrencySymbol(current)}
                           {convertPrice(
-                            props.discountAmmount || 0,
+                            props.discountAmount || 0,
                             current,
                             rates
                           )}
