@@ -13,7 +13,15 @@ import { useDispatch } from "react-redux";
 import { addInvoice, updateInvoice } from "../redux/invoicesSlice";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import generateRandomId from "../utils/generateRandomId";
-import { useInvoiceListData } from "../redux/hooks";
+import {
+  useCurrencyExchangeRates,
+  useInvoiceListData,
+  useProductsListData,
+} from "../redux/hooks";
+import { updateProduct } from "../redux/productsSlice";
+import { convertCurrency, convertPrice } from "../utils/currencyCoverter";
+import { newCurrencySymbol } from "../utils/newCurrencySymbol";
+import { setCurrentCurrency } from "../redux/currencyExchangeSlice";
 
 const InvoiceForm = () => {
   const dispatch = useDispatch();
@@ -22,23 +30,23 @@ const InvoiceForm = () => {
   const navigate = useNavigate();
   const isCopy = location.pathname.includes("create");
   const isEdit = location.pathname.includes("edit");
-
+  const { rates, current } = useCurrencyExchangeRates();
+  console.log("rates", rates, "current", current);
   const [isOpen, setIsOpen] = useState(false);
   const [copyId, setCopyId] = useState("");
   const { getOneInvoice, listSize } = useInvoiceListData();
+  const { productsList } = useProductsListData();
   const [formData, setFormData] = useState(
     isEdit
       ? getOneInvoice(params.id)
       : isCopy && params.id
       ? {
           ...getOneInvoice(params.id),
-          id: generateRandomId(),
+
           invoiceNumber: listSize + 1,
         }
       : {
-          id: generateRandomId(),
           currentDate: new Date().toLocaleDateString(),
-          invoiceNumber: listSize + 1,
           dateOfIssue: "",
           billTo: "",
           billToEmail: "",
@@ -56,14 +64,20 @@ const InvoiceForm = () => {
           currency: "$",
           items: [
             {
-              itemId: 0,
-              itemName: "",
-              itemDescription: "",
-              itemPrice: "1.00",
-              itemQuantity: 1,
+              id: generateRandomId(),
+              name: "",
+              description: "",
+              quantity: 1,
+              rate: 1,
             },
           ],
+
+          invoiceNumber: listSize + 1,
         }
+  );
+  const addedItems = formData.items.map((item) => item.id);
+  const availableItems = productsList.filter(
+    (product) => !addedItems.includes(product.id)
   );
 
   useEffect(() => {
@@ -72,24 +86,44 @@ const InvoiceForm = () => {
 
   const handleRowDel = (itemToDelete) => {
     const updatedItems = formData.items.filter(
-      (item) => item.itemId !== itemToDelete.itemId
+      (item) => item.id !== itemToDelete
     );
+    /* console.log({ ...formData, items: updatedItems }); */
     setFormData({ ...formData, items: updatedItems });
     handleCalculateTotal();
   };
 
   const handleAddEvent = () => {
-    const id = (+new Date() + Math.floor(Math.random() * 999999)).toString(36);
-    const newItem = {
-      itemId: id,
-      itemName: "",
-      itemDescription: "",
-      itemPrice: "1.00",
-      itemQuantity: 1,
-    };
     setFormData({
       ...formData,
-      items: [...formData.items, newItem],
+      items: [
+        ...formData.items,
+        {
+          id: generateRandomId(),
+          name: "",
+          description: "",
+          quantity: 1,
+          rate: 1,
+        },
+      ],
+    });
+    handleCalculateTotal();
+  };
+  const handleOptionSelect = (prevId, newId) => {
+    setFormData((prevData) => {
+      /*  console.log("handleoptionselect", prevData); */
+      const newItems = prevData.items.map((item) => {
+        if (item.id === prevId) {
+          return {
+            ...productsList.find((product) => product.id === newId),
+            quantity: 1,
+          };
+        } else {
+          return item;
+        }
+      });
+
+      return { ...prevData, items: newItems };
     });
     handleCalculateTotal();
   };
@@ -99,8 +133,7 @@ const InvoiceForm = () => {
       let subTotal = 0;
 
       prevFormData.items.forEach((item) => {
-        subTotal +=
-          parseFloat(item.itemPrice).toFixed(2) * parseInt(item.itemQuantity);
+        subTotal += parseFloat(item.rate).toFixed(2) * parseInt(item.quantity);
       });
 
       const taxAmount = parseFloat(
@@ -126,14 +159,17 @@ const InvoiceForm = () => {
   };
 
   const onItemizedItemEdit = (evt, id) => {
+    console.log("formdata when eidting", formData);
     const updatedItems = formData.items.map((oldItem) => {
-      if (oldItem.itemId === id) {
+      if (oldItem.id === id) {
+        /* console.log("***", { ...oldItem, [evt.target.name]: evt.target.value }); */
         return { ...oldItem, [evt.target.name]: evt.target.value };
       }
+
       return oldItem;
     });
 
-    setFormData({ ...formData, items: updatedItems });
+    setFormData((prevFormData) => ({ ...prevFormData, items: updatedItems }));
     handleCalculateTotal();
   };
 
@@ -143,7 +179,10 @@ const InvoiceForm = () => {
   };
 
   const onCurrencyChange = (selectedOption) => {
-    setFormData({ ...formData, currency: selectedOption.currency });
+    const symbol = newCurrencySymbol(selectedOption.currency);
+    setFormData({ ...formData, currency: symbol });
+    dispatch(setCurrentCurrency(selectedOption.currency));
+    handleCalculateTotal();
   };
 
   const openModal = (event) => {
@@ -157,10 +196,21 @@ const InvoiceForm = () => {
   };
 
   const handleAddInvoice = () => {
+    formData.items.forEach((item) => {
+      if (item.id !== 0) {
+        const { id, name, description, rate } = item;
+        dispatch(updateProduct({ id, name, description, rate }));
+      }
+    });
     if (isEdit) {
+      console.log("updateing data", {
+        id: params.id,
+        updatedInvoice: formData,
+      });
       dispatch(updateInvoice({ id: params.id, updatedInvoice: formData }));
       alert("Invoice updated successfuly 🥳");
     } else if (isCopy) {
+      /* console.log("addnewinvoice data", formData); */
       dispatch(addInvoice({ id: generateRandomId(), ...formData }));
       alert("Invoice added successfuly 🥳");
     } else {
@@ -185,15 +235,6 @@ const InvoiceForm = () => {
 
   return (
     <Form onSubmit={openModal}>
-      <div className="d-flex align-items-center">
-        <BiArrowBack size={18} />
-        <div className="fw-bold mt-1 mx-2 cursor-pointer">
-          <Link to="/">
-            <h5>Go Back</h5>
-          </Link>
-        </div>
-      </div>
-
       <Row>
         <Col md={8} lg={9}>
           <Card className="p-4 p-xl-5 my-3 my-xl-4">
@@ -303,36 +344,69 @@ const InvoiceForm = () => {
             </Row>
             <InvoiceItem
               onItemizedItemEdit={onItemizedItemEdit}
+              onOptionSelect={handleOptionSelect}
               onRowAdd={handleAddEvent}
-              onRowDel={handleRowDel}
+              onRowDelete={handleRowDel}
               currency={formData.currency}
               items={formData.items}
+              options={availableItems}
             />
             <Row className="mt-4 justify-content-end">
               <Col lg={6}>
                 <div className="d-flex flex-row align-items-start justify-content-between">
                   <span className="fw-bold">Subtotal:</span>
                   <span>
-                    {formData.currency}
-                    {formData.subTotal}
+                    {current === "USD" ? (
+                      <div>
+                        {formData.currency}
+                        {formData.subTotal}
+                      </div>
+                    ) : (
+                      <div>
+                        {formData.currency}
+                        {convertPrice(formData.subTotal, current, rates)}
+                      </div>
+                    )}
                   </span>
                 </div>
                 <div className="d-flex flex-row align-items-start justify-content-between mt-2">
                   <span className="fw-bold">Discount:</span>
-                  <span>
+                  <span className="d-flex">
                     <span className="small">
                       ({formData.discountRate || 0}%)
                     </span>
-                    {formData.currency}
-                    {formData.discountAmount || 0}
+                    {current === "USD" ? (
+                      <div>
+                        {formData.currency}
+                        {formData.discountAmount || 0}
+                      </div>
+                    ) : (
+                      <div>
+                        {formData.currency}
+                        {convertPrice(
+                          formData.discountAmount || 0,
+                          current,
+                          rates
+                        )}
+                      </div>
+                    )}
                   </span>
                 </div>
                 <div className="d-flex flex-row align-items-start justify-content-between mt-2">
                   <span className="fw-bold">Tax:</span>
-                  <span>
+                  <span className="d-flex">
                     <span className="small">({formData.taxRate || 0}%)</span>
-                    {formData.currency}
-                    {formData.taxAmount || 0}
+                    {current === "USD" ? (
+                      <div>
+                        {formData.currency}
+                        {formData.taxAmount || 0}
+                      </div>
+                    ) : (
+                      <div>
+                        {formData.currency}
+                        {convertPrice(formData.taxAmount || 0, current, rates)}
+                      </div>
+                    )}
                   </span>
                 </div>
                 <hr />
@@ -342,8 +416,17 @@ const InvoiceForm = () => {
                 >
                   <span className="fw-bold">Total:</span>
                   <span className="fw-bold">
-                    {formData.currency}
-                    {formData.total || 0}
+                    {current === "USD" ? (
+                      <div>
+                        {formData.currency}
+                        {formData.total || 0}
+                      </div>
+                    ) : (
+                      <div>
+                        {formData.currency}
+                        {convertPrice(formData.total || 0, current, rates)}
+                      </div>
+                    )}
                   </span>
                 </div>
               </Col>
@@ -412,15 +495,15 @@ const InvoiceForm = () => {
                 }
                 className="btn btn-light my-1"
                 aria-label="Change Currency"
+                value={current}
               >
-                <option value="$">USD (United States Dollar)</option>
-                <option value="£">GBP (British Pound Sterling)</option>
-                <option value="¥">JPY (Japanese Yen)</option>
-                <option value="$">CAD (Canadian Dollar)</option>
-                <option value="$">AUD (Australian Dollar)</option>
-                <option value="$">SGD (Singapore Dollar)</option>
-                <option value="¥">CNY (Chinese Renminbi)</option>
-                <option value="₿">BTC (Bitcoin)</option>
+                <option value="USD">USD (United States Dollar)</option>
+                <option value="GBP">GBP (British Pound Sterling)</option>
+                <option value="JPY">JPY (Japanese Yen)</option>
+                <option value="CAD">CAD (Canadian Dollar)</option>
+                <option value="AUD">AUD (Australian Dollar)</option>
+                <option value="SGD">SGD (Singapore Dollar)</option>
+                <option value="CNY">CNY (Chinese Renminbi)</option>
               </Form.Select>
             </Form.Group>
             <Form.Group className="my-3">

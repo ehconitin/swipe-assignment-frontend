@@ -1,7 +1,9 @@
-const generateRandomId = () => {
-  const randomNumber = Math.floor(Math.random() * 100);
+import { nanoid } from "@reduxjs/toolkit";
 
-  return randomNumber;
+const generateRandomId = () => {
+  const randomId = nanoid(7);
+
+  return randomId;
 };
 
 export default generateRandomId;

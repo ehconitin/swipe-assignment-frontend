@@ -8,6 +8,9 @@ import Modal from "react-bootstrap/Modal";
 import { BiPaperPlane, BiCloudDownload } from "react-icons/bi";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { useCurrencyExchangeRates } from "../redux/hooks";
+import { newCurrencySymbol } from "../utils/newCurrencySymbol";
+import { convertPrice } from "../utils/currencyCoverter";
 
 const GenerateInvoice = () => {
   html2canvas(document.querySelector("#invoiceCapture")).then((canvas) => {
@@ -27,6 +30,7 @@ const GenerateInvoice = () => {
 };
 
 const InvoiceModal = (props) => {
+  const { rates, current } = useCurrencyExchangeRates();
   return (
     <div>
       <Modal
@@ -44,15 +48,25 @@ const InvoiceModal = (props) => {
               <h4 className="fw-bold my-2">
                 {props.info.billFrom || "John Uberbacher"}
               </h4>
-              <h7 className="fw-bold text-secondary mb-1">
+              <h6 className="fw-bold text-secondary mb-1">
                 Invoice No.: {props.info.invoiceNumber || ""}
-              </h7>
+              </h6>
             </div>
             <div className="text-end ms-4">
               <h6 className="fw-bold mt-1 mb-2">Amount&nbsp;Due:</h6>
               <h5 className="fw-bold text-secondary">
                 {" "}
-                {props.currency} {props.total}
+                {current === "USD" ? (
+                  <div>
+                    {newCurrencySymbol(current)}
+                    {props.total || 0}
+                  </div>
+                ) : (
+                  <div>
+                    {newCurrencySymbol(current)}
+                    {convertPrice(props.total || 0, current, rates)}
+                  </div>
+                )}
               </h5>
             </div>
           </div>
@@ -88,15 +102,39 @@ const InvoiceModal = (props) => {
                 {props.items.map((item, i) => {
                   return (
                     <tr id={i} key={i}>
-                      <td style={{ width: "70px" }}>{item.itemQuantity}</td>
+                      <td style={{ width: "70px" }}>{item.quantity}</td>
                       <td>
-                        {item.itemName} - {item.itemDescription}
+                        {item.name} - {item.description}
                       </td>
                       <td className="text-end" style={{ width: "100px" }}>
-                        {props.currency} {item.itemPrice}
+                        {current === "USD" ? (
+                          <div>
+                            {newCurrencySymbol(current)}
+                            {item.rate}
+                          </div>
+                        ) : (
+                          <div>
+                            {newCurrencySymbol(current)}
+                            {convertPrice(item.rate, current, rates)}
+                          </div>
+                        )}
                       </td>
                       <td className="text-end" style={{ width: "100px" }}>
-                        {props.currency} {item.itemPrice * item.itemQuantity}
+                        {current === "USD" ? (
+                          <div>
+                            {newCurrencySymbol(current)}
+                            {item.rate * item.quantity}
+                          </div>
+                        ) : (
+                          <div>
+                            {newCurrencySymbol(current)}
+                            {convertPrice(
+                              item.rate * item.quantity,
+                              current,
+                              rates
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -116,7 +154,17 @@ const InvoiceModal = (props) => {
                     TAX
                   </td>
                   <td className="text-end" style={{ width: "100px" }}>
-                    {props.currency} {props.taxAmmount}
+                    {current === "USD" ? (
+                      <div>
+                        {newCurrencySymbol(current)}
+                        {props.taxAmmount || 0}
+                      </div>
+                    ) : (
+                      <div>
+                        {newCurrencySymbol(current)}
+                        {convertPrice(props.taxAmmount || 0, current, rates)}
+                      </div>
+                    )}
                   </td>
                 </tr>
                 {props.discountAmmount !== 0.0 && (
@@ -126,7 +174,21 @@ const InvoiceModal = (props) => {
                       DISCOUNT
                     </td>
                     <td className="text-end" style={{ width: "100px" }}>
-                      {props.currency} {props.discountAmmount}
+                      {current === "USD" ? (
+                        <div>
+                          {newCurrencySymbol(current)}
+                          {props.discountAmmount || 0}
+                        </div>
+                      ) : (
+                        <div>
+                          {newCurrencySymbol(current)}
+                          {convertPrice(
+                            props.discountAmmount || 0,
+                            current,
+                            rates
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -136,7 +198,17 @@ const InvoiceModal = (props) => {
                     TOTAL
                   </td>
                   <td className="text-end" style={{ width: "100px" }}>
-                    {props.currency} {props.total}
+                    {current === "USD" ? (
+                      <div>
+                        {newCurrencySymbol(current)}
+                        {props.total || 0}
+                      </div>
+                    ) : (
+                      <div>
+                        {newCurrencySymbol(current)}
+                        {convertPrice(props.total || 0, current, rates)}
+                      </div>
+                    )}
                   </td>
                 </tr>
               </tbody>
