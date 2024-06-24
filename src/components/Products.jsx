@@ -70,7 +70,7 @@ const Products = () => {
                     </Button>
                   </div>
                 </div>
-                <Table responsive>
+                <Table responsive={true}>
                   <thead>
                     <tr>
                       <th
@@ -80,7 +80,7 @@ const Products = () => {
                         Product No.
                       </th>
                       <th
-                        className="text-center align-middle"
+                        className="text-center align-middle "
                         style={{ width: "15%" }}
                       >
                         Product ID

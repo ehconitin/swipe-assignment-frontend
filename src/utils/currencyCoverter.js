@@ -3,7 +3,7 @@ import axios from "axios";
 export const convertCurrency = () => {
   const apikey = process.env.REACT_APP_YOUR_API_KEY;
   const currencyConversionRates = axios
-    .get("https://api.freecurrencyapi.com/v1/lates", {
+    .get("https://api.freecurrencyapi.com/v1/latest", {
       params: {
         apikey,
         base_currency: "USD",
