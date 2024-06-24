@@ -77,10 +77,10 @@ const ItemRow = ({
           onChange={(e) => handleSelect(String(e.target.value))}
           value={"Current Item"}
         >
-          <option>{item.id ? "Product List" : item.name}</option>
+          <option>{item.id ? "Product List with Ids" : item.name}</option>
           {products.map((option) => (
             <option value={option.id} key={option.id}>
-              {`${option.name} - ${option.id}` || "Select a product"}
+              {`${option.name}            -        ${option.id}`}
             </option>
           ))}
         </Form.Select>
